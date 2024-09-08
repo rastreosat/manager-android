@@ -92,23 +92,17 @@ class MainFragment : WebViewFragment() {
     }
 
     private fun loadPage() {
-        val url = PreferenceManager.getDefaultSharedPreferences(activity)
-            .getString(MainActivity.PREFERENCE_URL, null)
-        if (url != null) {
-            val mainActivity = activity as? MainActivity
-            val eventId = mainActivity?.pendingEventId
-            mainActivity?.pendingEventId = null
-            if (eventId != null) {
-                webView.loadUrl("$url?eventId=$eventId")
-            } else {
-                webView.loadUrl(url)
-            }
+        val url = MainActivity.PREFERENCE_URL;
+        val mainActivity = activity as? MainActivity
+        val eventId = mainActivity?.pendingEventId
+        mainActivity?.pendingEventId = null
+        if (eventId != null) {
+            webView.loadUrl("$url?eventId=$eventId")
         } else {
-            activity.fragmentManager
-                .beginTransaction().replace(android.R.id.content, StartFragment())
-                .commitAllowingStateLoss()
+            webView.loadUrl(url)
         }
     }
+
 
     private val tokenBroadcastReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
