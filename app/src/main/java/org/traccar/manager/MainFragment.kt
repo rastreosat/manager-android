@@ -30,6 +30,7 @@ import android.os.Environment
 import android.os.Message
 import android.view.View
 import android.webkit.*
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -71,6 +72,7 @@ class MainFragment : WebViewFragment() {
         broadcastManager = LocalBroadcastManager.getInstance(activity)
     }
 
+    @RequiresApi(Build.VERSION_CODES.M)
     @SuppressLint("SetJavaScriptEnabled")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -259,6 +261,7 @@ class MainFragment : WebViewFragment() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.M)
     private val downloadListener = DownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
         val request = DownloadManager.Request(Uri.parse(url))
         request.setMimeType(mimeType)
