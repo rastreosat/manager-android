@@ -2,7 +2,7 @@ name: Deploy to pages
 
 on:
   push:
-    branches: ["master"]
+    branches: ["tsrastrear"]
   workflow_dispatch:
 permissions:
   contents: read
@@ -48,7 +48,7 @@ jobs:
           mkdir -pv public
           cp -v app/build/outputs/apk/google/release/app-google-release.apk "public/app-${{ github.run_number }}.apk"
           echo "<h1>Download the APK ${{ github.run_number }} from the link below:<h1>" > public/index.html
-          echo "<h1><a href='app-${{ github.run_number }}.apk'>Download APK ${{ github.run_number }}</a></h1>" >> public/index.html
+          echo "<h1><a href='app-${{ github.run_number }}.apk'>Download TS Rastrear APK ${{ github.run_number }}</a></h1>" >> public/index.html
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

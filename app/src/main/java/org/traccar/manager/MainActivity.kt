@@ -68,6 +68,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
-        const val PREFERENCE_URL = "https://web.rastreosat.com.br"
+        const val PREFERENCE_URL = "https://dash.tsrastrear.com"
     }
 }

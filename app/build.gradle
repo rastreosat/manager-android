@@ -8,7 +8,7 @@ plugins {
 android {
     compileSdk 34
     defaultConfig {
-        applicationId 'com.rastreosat.manager'
+        applicationId 'com.tsrastrear.manager'
         minSdkVersion 21
         targetSdkVersion 34
         versionCode 40
