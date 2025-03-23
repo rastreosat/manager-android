@@ -14,7 +14,33 @@ platform :android do
                  "android.injected.signing.key.password" => "password"
                }
     )
-    # Print the generated AAB file path
-    UI.message("📦 AAB File: #{lane_context[:GRADLE_AAB_OUTPUT_PATH]}")
+
+      # Get the generated AAB file path
+    aab_path = lane_context[:GRADLE_AAB_OUTPUT_PATH]
+
+    # Generate timestamp
+    timestamp = Time.now.strftime('%Y%m%d%H%M%S')
+
+    # Define the output directory and file names
+    output_dir = "public"
+    output_file = "app-#{timestamp}.aab"
+    output_path = File.join(output_dir, output_file)
+
+    # Create the public folder if it doesn't exist
+    FileUtils.mkdir_p(output_dir)
+
+    # Copy the AAB file
+    FileUtils.cp(aab_path, output_path)
+
+    # Generate index.html
+    index_file = File.join(output_dir, "index.html")
+    File.open(index_file, "w") do |file|
+      file.puts "<h1>Download the APK from the link below:</h1>"
+      file.puts "<h1><a href='#{output_file}'>Download APK (#{timestamp})</a></h1>"
+    end
+
+    UI.message("✅ Copied AAB to: #{output_path}")
+    UI.message("✅ Generated index.html in: #{index_file}")
+
   end
 end
