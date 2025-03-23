@@ -5,7 +5,7 @@ platform :android do
   desc "build"
   lane :build do
     gradle(
-        task: 'assembleGoogle',
+        task: 'bundleGoogle',
         build_type: 'Release',
         properties: {
                  "android.injected.signing.store.file" => "/home/runner/keystore",
