@@ -14,5 +14,7 @@ platform :android do
                  "android.injected.signing.key.password" => "password"
                }
     )
+    # Print the generated AAB file path
+    UI.message("📦 AAB File: #{lane_context[:GRADLE_AAB_OUTPUT_PATH]}")
   end
 end
