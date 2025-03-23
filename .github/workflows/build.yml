@@ -42,6 +42,7 @@ jobs:
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 --decode > /home/runner/keystore
           fastlane build
+          echo "Full path of public: $(realpath public)"
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact

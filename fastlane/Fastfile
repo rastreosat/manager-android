@@ -41,6 +41,7 @@ platform :android do
 
     UI.message("✅ Copied AAB to: #{output_path}")
     UI.message("✅ Generated index.html in: #{index_file}")
+    UI.message("Full path of public directory: #{File.expand_path(output_dir)}")
 
   end
 end
