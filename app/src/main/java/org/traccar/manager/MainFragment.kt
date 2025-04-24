@@ -68,7 +68,7 @@ class MainFragment : WebViewFragment() {
         fun postMessage(message: String) {
             if (message == "print") {
                 Handler(Looper.getMainLooper()).post {
-                    getPdf(activity)
+                    getPdf(activity, message.substring(6))
                 }
             } else if (message.startsWith("login")) {
                 if (message.length > 6) {
@@ -93,9 +93,8 @@ class MainFragment : WebViewFragment() {
         }
 
         @RequiresApi(Build.VERSION_CODES.M)
-        private fun getPdf(activity: Activity) {
+        private fun getPdf(activity: Activity, fileName: String) {
             val context = webView.context
-            val fileName = "Informe.pdf"
 
             val file = File(context.cacheDir, fileName)
             if (file.exists()) file.delete()
