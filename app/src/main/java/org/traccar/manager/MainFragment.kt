@@ -66,7 +66,7 @@ class MainFragment : WebViewFragment() {
         @RequiresApi(Build.VERSION_CODES.M)
         @JavascriptInterface
         fun postMessage(message: String) {
-            if (message == "print") {
+            if (message.startsWith("print")) {
                 Handler(Looper.getMainLooper()).post {
                     getPdf(activity, message.substring(6))
                 }
