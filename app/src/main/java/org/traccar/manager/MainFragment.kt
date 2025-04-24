@@ -20,31 +20,57 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.DownloadManager
-import android.content.*
+import android.app.ProgressDialog
+import android.content.ActivityNotFoundException
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.DialogInterface
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.os.Message
+import android.print.PdfView
 import android.view.View
-import android.webkit.*
+import android.webkit.CookieManager
+import android.webkit.DownloadListener
+import android.webkit.GeolocationPermissions
+import android.webkit.JavascriptInterface
+import android.webkit.URLUtil
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.webkit.WebViewFragment
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import androidx.core.content.edit
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.PreferenceManager
+import java.io.File
 
 class MainFragment : WebViewFragment() {
 
     private lateinit var broadcastManager: LocalBroadcastManager
 
     inner class AppInterface {
+        @RequiresApi(Build.VERSION_CODES.M)
         @JavascriptInterface
         fun postMessage(message: String) {
-            if (message.startsWith("login")) {
+            if (message == "print") {
+                Handler(Looper.getMainLooper()).post {
+                    getPdf(activity)
+                }
+            } else if (message.startsWith("login")) {
                 if (message.length > 6) {
                     SecurityManager.saveToken(activity, message.substring(6))
                 }
@@ -61,10 +87,44 @@ class MainFragment : WebViewFragment() {
             } else if (message.startsWith("server")) {
                 val url = message.substring(7)
                 PreferenceManager.getDefaultSharedPreferences(activity)
-                    .edit().putString(MainActivity.PREFERENCE_URL, url).apply()
+                    .edit() { putString(MainActivity.PREFERENCE_URL, url) }
                 activity.runOnUiThread { loadPage() }
             }
         }
+
+        @RequiresApi(Build.VERSION_CODES.M)
+        private fun getPdf(activity: Activity) {
+            val context = webView.context
+            val fileName = "Informe.pdf"
+
+            val file = File(context.cacheDir, fileName)
+            if (file.exists()) file.delete()
+
+            val progressDialog = ProgressDialog(context)
+            progressDialog.setMessage("Aguarde por favor")
+            progressDialog.show()
+            PdfView.createWebPrintJob(
+                activity,
+                webView!!,
+                context.cacheDir,
+                fileName
+            ) { path ->
+                path?.let {
+                    progressDialog.hide()
+                    fileChooser(context, it)
+                }
+            }
+        }
+    }
+
+    fun fileChooser(context: Context, path: String) {
+        val file = File(path)
+        val target = Intent("android.intent.action.VIEW")
+        val uri = FileProvider.getUriForFile(context, "com.rastreosat.manager.fileprovider", file)
+        target.setDataAndType(uri, "application/pdf")
+        target.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+        val intent = Intent.createChooser(target, "Abrir")
+        context.startActivity(intent)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
