@@ -154,11 +154,12 @@ class MainFragment : WebViewFragment() {
             FileProvider.getUriForFile(activity, "com.rastreosat.manager.fileprovider", file)
         }
         uri?.let {
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(it, mimeType)
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = mimeType
+                putExtra(Intent.EXTRA_STREAM, it)
                 flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
             }
-            activity.startActivity(Intent.createChooser(intent, "Abrir"))
+            activity.startActivity(Intent.createChooser(intent, "Partilhar"))
         }
     }
 
