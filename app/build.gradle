@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    compileSdk 34
+    compileSdk 35
     defaultConfig {
         applicationId 'com.rastreosat.manager'
         minSdkVersion 21
-        targetSdkVersion 34
+        targetSdkVersion 35
         versionCode 45
         versionName '4.9'
         multiDexEnabled true
