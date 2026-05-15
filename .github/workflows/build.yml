@@ -47,8 +47,10 @@ jobs:
       - run: |
           mkdir -pv public
           cp -v app/build/outputs/apk/google/release/app-google-release.apk "public/app-${{ github.run_number }}.apk"
-          echo "<h1>Download the APK ${{ github.run_number }} from the link below:<h1>" > public/index.html
-          echo "<h1><a href='app-${{ github.run_number }}.apk'>Download APK ${{ github.run_number }}</a></h1>" >> public/index.html
+          cp -v app/build/outputs/bundle/googleRelease/app-google-release.aab "public/app-${{ github.run_number }}.aab"
+          echo "<h1>Download build ${{ github.run_number }}:</h1>" > public/index.html
+          echo "<p><a href='app-${{ github.run_number }}.apk'>APK ${{ github.run_number }}</a></p>" >> public/index.html
+          echo "<p><a href='app-${{ github.run_number }}.aab'>Bundle (AAB) ${{ github.run_number }}</a></p>" >> public/index.html
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
