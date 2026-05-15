@@ -370,9 +370,7 @@ class MainFragment : WebViewFragment() {
     @RequiresApi(Build.VERSION_CODES.M)
     private val downloadListener = DownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
         if (url.startsWith("blob:")) {
-            val ext = android.webkit.MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: ""
-            val fileName = URLUtil.guessFileName(url, contentDisposition, mimeType)
-                .let { if (ext.isNotEmpty() && !it.endsWith(".$ext")) "$it.$ext" else it }
+            val fileName = "report.xlsx"
             Handler(Looper.getMainLooper()).post {
                 webView.evaluateJavascript("""
                     (function() {
