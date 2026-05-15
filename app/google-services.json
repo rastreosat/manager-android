@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "133223115866",
+    "project_id": "rastreosat-gps",
+    "storage_bucket": "rastreosat-gps.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:133223115866:android:4072dd28aee758ba827c63",
+        "android_client_info": {
+          "package_name": "com.maminfo.manager"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAHHy4HpMtF3uf4mOzqIPhWomlm1CZHhrE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:133223115866:android:64343d951dba8ba9827c63",
+        "android_client_info": {
+          "package_name": "com.rastreosat.manager"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAHHy4HpMtF3uf4mOzqIPhWomlm1CZHhrE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

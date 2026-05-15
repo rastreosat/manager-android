@@ -20,30 +20,61 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.DownloadManager
-import android.content.*
+import android.app.ProgressDialog
+import android.content.ActivityNotFoundException
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.DialogInterface
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.os.Message
+import android.print.PdfView
 import android.view.View
-import android.webkit.*
+import android.webkit.CookieManager
+import android.webkit.DownloadListener
+import android.webkit.GeolocationPermissions
+import android.webkit.JavascriptInterface
+import android.webkit.URLUtil
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.webkit.WebViewFragment
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import androidx.core.content.edit
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.PreferenceManager
+import android.content.ContentValues
+import android.provider.MediaStore
+import android.util.Base64
+import android.widget.Toast
+import java.io.File
 
 class MainFragment : WebViewFragment() {
 
     private lateinit var broadcastManager: LocalBroadcastManager
 
     inner class AppInterface {
+        @RequiresApi(Build.VERSION_CODES.M)
         @JavascriptInterface
         fun postMessage(message: String) {
-            if (message.startsWith("login")) {
+            if (message.startsWith("print")) {
+                Handler(Looper.getMainLooper()).post {
+                    getPdf(activity, message.substring(6))
+                }
+            } else if (message.startsWith("login")) {
                 if (message.length > 6) {
                     SecurityManager.saveToken(activity, message.substring(6))
                 }
@@ -57,13 +88,89 @@ class MainFragment : WebViewFragment() {
                 }
             } else if (message.startsWith("logout")) {
                 SecurityManager.deleteToken(activity)
+            } else if (message.startsWith("download|")) {
+                val parts = message.split("|", limit = 3)
+                if (parts.size == 3) {
+                    val fileName = parts[1]
+                    val dataUrl = parts[2]
+                    val base64Data = dataUrl.substringAfter(",")
+                    val bytes = Base64.decode(base64Data, Base64.DEFAULT)
+                    val mimeType = dataUrl.substringAfter("data:").substringBefore(";")
+                    Handler(Looper.getMainLooper()).post {
+                        saveBlobFile(fileName, mimeType, bytes)
+                    }
+                }
             } else if (message.startsWith("server")) {
                 val url = message.substring(7)
                 PreferenceManager.getDefaultSharedPreferences(activity)
-                    .edit().putString(MainActivity.PREFERENCE_URL, url).apply()
+                    .edit() { putString(MainActivity.PREFERENCE_URL, url) }
                 activity.runOnUiThread { loadPage() }
             }
         }
+
+        @RequiresApi(Build.VERSION_CODES.M)
+        private fun getPdf(activity: Activity, fileName: String) {
+            val context = webView.context
+
+            val file = File(context.cacheDir, fileName)
+            if (file.exists()) file.delete()
+
+            val progressDialog = ProgressDialog(context)
+            progressDialog.setMessage("Aguarde por favor")
+            progressDialog.show()
+            PdfView.createWebPrintJob(
+                activity,
+                webView!!,
+                context.cacheDir,
+                fileName
+            ) { path ->
+                path?.let {
+                    progressDialog.hide()
+                    fileChooser(context, it)
+                }
+            }
+        }
+    }
+
+    private fun saveBlobFile(fileName: String, mimeType: String, bytes: ByteArray) {
+        val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val values = ContentValues().apply {
+                put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+                put(MediaStore.Downloads.MIME_TYPE, mimeType)
+                put(MediaStore.Downloads.IS_PENDING, 1)
+            }
+            val resolver = activity.contentResolver
+            val contentUri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            contentUri?.let {
+                resolver.openOutputStream(it)?.use { os -> os.write(bytes) }
+                values.clear()
+                values.put(MediaStore.Downloads.IS_PENDING, 0)
+                resolver.update(it, values, null, null)
+            }
+            contentUri
+        } else {
+            val file = File(activity.cacheDir, fileName)
+            file.writeBytes(bytes)
+            FileProvider.getUriForFile(activity, "com.rastreosat.manager.fileprovider", file)
+        }
+        uri?.let {
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = mimeType
+                putExtra(Intent.EXTRA_STREAM, it)
+                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            }
+            activity.startActivity(Intent.createChooser(intent, "Partilhar"))
+        }
+    }
+
+    fun fileChooser(context: Context, path: String) {
+        val file = File(path)
+        val target = Intent("android.intent.action.VIEW")
+        val uri = FileProvider.getUriForFile(context, "com.rastreosat.manager.fileprovider", file)
+        target.setDataAndType(uri, "application/pdf")
+        target.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+        val intent = Intent.createChooser(target, "Abrir")
+        context.startActivity(intent)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,6 +178,7 @@ class MainFragment : WebViewFragment() {
         broadcastManager = LocalBroadcastManager.getInstance(activity)
     }
 
+    @RequiresApi(Build.VERSION_CODES.M)
     @SuppressLint("SetJavaScriptEnabled")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -92,23 +200,17 @@ class MainFragment : WebViewFragment() {
     }
 
     private fun loadPage() {
-        val url = PreferenceManager.getDefaultSharedPreferences(activity)
-            .getString(MainActivity.PREFERENCE_URL, null)
-        if (url != null) {
-            val mainActivity = activity as? MainActivity
-            val eventId = mainActivity?.pendingEventId
-            mainActivity?.pendingEventId = null
-            if (eventId != null) {
-                webView.loadUrl("$url?eventId=$eventId")
-            } else {
-                webView.loadUrl(url)
-            }
+        val url = MainActivity.PREFERENCE_URL;
+        val mainActivity = activity as? MainActivity
+        val eventId = mainActivity?.pendingEventId
+        mainActivity?.pendingEventId = null
+        if (eventId != null) {
+            webView.loadUrl("$url?eventId=$eventId")
         } else {
-            activity.fragmentManager
-                .beginTransaction().replace(android.R.id.content, StartFragment())
-                .commitAllowingStateLoss()
+            webView.loadUrl(url)
         }
     }
+
 
     private val tokenBroadcastReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -265,7 +367,27 @@ class MainFragment : WebViewFragment() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.M)
     private val downloadListener = DownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+        if (url.startsWith("blob:")) {
+            val fileName = "report.xlsx"
+            Handler(Looper.getMainLooper()).post {
+                webView.evaluateJavascript("""
+                    (function() {
+                        fetch('$url')
+                            .then(function(r) { return r.blob(); })
+                            .then(function(blob) {
+                                var reader = new FileReader();
+                                reader.onloadend = function() {
+                                    window.appInterface.postMessage('download|$fileName|' + reader.result);
+                                };
+                                reader.readAsDataURL(blob);
+                            });
+                    })();
+                """.trimIndent(), null)
+            }
+            return@DownloadListener
+        }
         val request = DownloadManager.Request(Uri.parse(url))
         request.setMimeType(mimeType)
         request.addRequestHeader("cookie", CookieManager.getInstance().getCookie(url))

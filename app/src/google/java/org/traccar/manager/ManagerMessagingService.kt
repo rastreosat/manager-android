@@ -38,7 +38,7 @@ class ManagerMessagingService : FirebaseMessagingService() {
         remoteMessage.data["eventId"]?.let { intent.putExtra("eventId", it) }
         val pendingIntent = PendingIntent.getActivity(this, 0, intent, flags)
         val builder = NotificationCompat.Builder(this, getString(R.string.notification_channel_id))
-            .setSmallIcon(R.drawable.ic_stat_notify)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(getString(R.string.app_name))
             .setContentText(remoteMessage.notification?.body)
             .setAutoCancel(true)

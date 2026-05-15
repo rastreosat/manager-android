@@ -8,11 +8,11 @@ plugins {
 android {
     compileSdk 35
     defaultConfig {
-        applicationId 'org.traccar.manager'
+        applicationId 'com.rastreosat.manager'
         minSdkVersion 21
         targetSdkVersion 35
-        versionCode 42
-        versionName '4.6'
+        versionCode 46
+        versionName '5.0'
         multiDexEnabled true
     }
     namespace 'org.traccar.manager'
@@ -52,18 +52,10 @@ dependencies {
     googleImplementation 'com.google.firebase:firebase-crashlytics'
     googleImplementation 'com.google.firebase:firebase-messaging'
 }
-tasks.register('copyFirebaseConfig', Copy) {
-    from '../../environment/google-services'
-    into '.'
-    include 'traccar-manager-android.json'
-    rename('traccar-manager-android.json', 'google-services.json')
-}
 afterEvaluate {
     tasks.matching { it.name.contains('Google') }.configureEach { task ->
         if (task.name.contains('Regular')) {
             task.enabled false
-        } else {
-            task.dependsOn copyFirebaseConfig
         }
     }
 }
