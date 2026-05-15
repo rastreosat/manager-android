@@ -56,6 +56,10 @@ import androidx.core.content.FileProvider
 import androidx.core.content.edit
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.PreferenceManager
+import android.content.ContentValues
+import android.provider.MediaStore
+import android.util.Base64
+import android.widget.Toast
 import java.io.File
 
 class MainFragment : WebViewFragment() {
@@ -84,6 +88,18 @@ class MainFragment : WebViewFragment() {
                 }
             } else if (message.startsWith("logout")) {
                 SecurityManager.deleteToken(activity)
+            } else if (message.startsWith("download|")) {
+                val parts = message.split("|", limit = 3)
+                if (parts.size == 3) {
+                    val fileName = parts[1]
+                    val dataUrl = parts[2]
+                    val base64Data = dataUrl.substringAfter(",")
+                    val bytes = Base64.decode(base64Data, Base64.DEFAULT)
+                    val mimeType = dataUrl.substringAfter("data:").substringBefore(";")
+                    Handler(Looper.getMainLooper()).post {
+                        saveBlobFile(fileName, mimeType, bytes)
+                    }
+                }
             } else if (message.startsWith("server")) {
                 val url = message.substring(7)
                 PreferenceManager.getDefaultSharedPreferences(activity)
@@ -114,6 +130,29 @@ class MainFragment : WebViewFragment() {
                 }
             }
         }
+    }
+
+    private fun saveBlobFile(fileName: String, mimeType: String, bytes: ByteArray) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val values = ContentValues().apply {
+                put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+                put(MediaStore.Downloads.MIME_TYPE, mimeType)
+                put(MediaStore.Downloads.IS_PENDING, 1)
+            }
+            val resolver = activity.contentResolver
+            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            uri?.let {
+                resolver.openOutputStream(it)?.use { os -> os.write(bytes) }
+                values.clear()
+                values.put(MediaStore.Downloads.IS_PENDING, 0)
+                resolver.update(it, values, null, null)
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            File(dir, fileName).writeBytes(bytes)
+        }
+        Toast.makeText(activity, "$fileName guardado em Transferências", Toast.LENGTH_SHORT).show()
     }
 
     fun fileChooser(context: Context, path: String) {
@@ -322,6 +361,25 @@ class MainFragment : WebViewFragment() {
 
     @RequiresApi(Build.VERSION_CODES.M)
     private val downloadListener = DownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+        if (url.startsWith("blob:")) {
+            val fileName = URLUtil.guessFileName(url, contentDisposition, mimeType)
+            Handler(Looper.getMainLooper()).post {
+                webView.evaluateJavascript("""
+                    (function() {
+                        fetch('$url')
+                            .then(function(r) { return r.blob(); })
+                            .then(function(blob) {
+                                var reader = new FileReader();
+                                reader.onloadend = function() {
+                                    window.appInterface.postMessage('download|$fileName|' + reader.result);
+                                };
+                                reader.readAsDataURL(blob);
+                            });
+                    })();
+                """.trimIndent(), null)
+            }
+            return@DownloadListener
+        }
         val request = DownloadManager.Request(Uri.parse(url))
         request.setMimeType(mimeType)
         request.addRequestHeader("cookie", CookieManager.getInstance().getCookie(url))
