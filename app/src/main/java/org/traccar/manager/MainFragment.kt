@@ -133,26 +133,33 @@ class MainFragment : WebViewFragment() {
     }
 
     private fun saveBlobFile(fileName: String, mimeType: String, bytes: ByteArray) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val values = ContentValues().apply {
                 put(MediaStore.Downloads.DISPLAY_NAME, fileName)
                 put(MediaStore.Downloads.MIME_TYPE, mimeType)
                 put(MediaStore.Downloads.IS_PENDING, 1)
             }
             val resolver = activity.contentResolver
-            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-            uri?.let {
+            val contentUri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            contentUri?.let {
                 resolver.openOutputStream(it)?.use { os -> os.write(bytes) }
                 values.clear()
                 values.put(MediaStore.Downloads.IS_PENDING, 0)
                 resolver.update(it, values, null, null)
             }
+            contentUri
         } else {
-            @Suppress("DEPRECATION")
-            val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            File(dir, fileName).writeBytes(bytes)
+            val file = File(activity.cacheDir, fileName)
+            file.writeBytes(bytes)
+            FileProvider.getUriForFile(activity, "com.rastreosat.manager.fileprovider", file)
         }
-        Toast.makeText(activity, "$fileName guardado em Transferências", Toast.LENGTH_SHORT).show()
+        uri?.let {
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(it, mimeType)
+                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            }
+            activity.startActivity(Intent.createChooser(intent, "Abrir"))
+        }
     }
 
     fun fileChooser(context: Context, path: String) {
@@ -362,7 +369,9 @@ class MainFragment : WebViewFragment() {
     @RequiresApi(Build.VERSION_CODES.M)
     private val downloadListener = DownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
         if (url.startsWith("blob:")) {
+            val ext = android.webkit.MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: ""
             val fileName = URLUtil.guessFileName(url, contentDisposition, mimeType)
+                .let { if (ext.isNotEmpty() && !it.endsWith(".$ext")) "$it.$ext" else it }
             Handler(Looper.getMainLooper()).post {
                 webView.evaluateJavascript("""
                     (function() {
